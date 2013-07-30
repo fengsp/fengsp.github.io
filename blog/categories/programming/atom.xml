@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
 
-  <title><![CDATA[Category: Programming | fengsp blogs]]></title>
+  <title><![CDATA[Category: programming | fengsp blogs]]></title>
   <link href="http://fengsp.github.io/blog/categories/programming/atom.xml" rel="self"/>
   <link href="http://fengsp.github.io/"/>
-  <updated>2013-07-24T16:13:59+08:00</updated>
+  <updated>2013-07-30T16:58:37+08:00</updated>
   <id>http://fengsp.github.io/</id>
   <author>
     <name><![CDATA[fengsp]]></name>
@@ -14,29 +14,191 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Welcome to my blog]]></title>
-    <link href="http://fengsp.github.io/blog/2013/07/18/welcome-to-my-blog/"/>
-    <updated>2013-07-18T14:57:00+08:00</updated>
-    <id>http://fengsp.github.io/blog/2013/07/18/welcome-to-my-blog</id>
-    <content type="html"><![CDATA[<p>I am a web developr. Well, actually I prefer to name myself one HTML Generator, for I am working around with html every day currently.</p>
+    <title type="html"><![CDATA[About python: Part I]]></title>
+    <link href="http://fengsp.github.io/blog/2013/07/30/something-about-python-part-i/"/>
+    <updated>2013-07-30T14:51:00+08:00</updated>
+    <id>http://fengsp.github.io/blog/2013/07/30/something-about-python-part-i</id>
+    <content type="html"><![CDATA[<h2>Python execution</h2>
 
-<p>Less is less, for those guys who want to know me, that is all. You do not have to read the following content…</p>
+<p>In Python, everything is runtime. Everything happens in namespaces, modules classes and functions all have their own namespace. Modules are executed top to bottom, def and class are runtime too.</p>
 
-<hr />
+<p>No basic things like if or for loop statement is going to be mentioned. Let us begin with one class and one function.</p>
 
-<p>Today is one meeting day, which is boring(you know what I mean), during the mean time, I set up this blog env.</p>
+<pre><code>class Foo(object):
 
-<h4>My Option:</h4>
+    def __init__(self):
+        self.foo = 'foo'
 
-<p>This baby <a href="http://octopress.org/" title="octopress">Octopress</a>…</p>
+foo = Foo()
+</code></pre>
 
-<p>It is hosted by github pages, thanks to github a lot by the way!</p>
+<p>We have a init function to initialize the class instance, the self argument is implicitly brought in when you call a instance method.</p>
 
-<p>It you&rsquo;d like to use it, setting is really simple, just follow the online instructions, what all you need is UNIX and ruby installed.</p>
+<pre><code>def func(arg1, arg2=foo)
+    print "We are inside func"
+    def inner_func(arg3=arg2):
+        print "entering inner_func"
+        return arg1, arg3
+    arg1 = arg2 = None
+    return inner_func
 
-<p>While setting up it what bothers me most is that I have never heared of Github Pages(well, I admit that I am ignorant), whatever, If you are going to choose deploying to Github Pages, remember to change your new repository name into <strong>username.github.io</strong>.</p>
+foo.foo = 'foo2'
+arg1, arg2 = func('fsp')()
+print arg1, arg2.foo
+</code></pre>
 
-<p>Have fun here!!!!</p>
+<p>So here we are getting None and foo2 as the result, what I want to mention here is that arguments of a function is initialized when the interpreter meets the def thing, once your def is done, everytime you call a function, the arg is actually the same thing. (Something weird might happen as a result of this, by the way, the body block is just compiled but not executed when met.)</p>
+
+<h2>Some basic things</h2>
+
+<p>Variables are names, not containers. Everything is an object, everything is a reference, while variables are neither. Variables refer to objects and namespaces map names to objects. You can use module to organize code, every module is executed on first import, then they are cached in <code>sys.modules</code>. And <code>import</code> is syntactic sugar, which means that <code>mod = __import__("mod")</code>.</p>
+
+<pre><code>os = __import__('os')
+print os.path.dirname(__file__)
+</code></pre>
+
+<p>So we have python objects, we have the concept of mutability and hashability. We have usual operators, <code>+ * / ** ^ &amp; ~ +=</code>.  You can access the attribute by using <code>obj.attr</code> and access Indexing things by <code>obj[idx]</code>. Calling something is simple, <code>obj(args…)</code>, Iteration is simple too, <code>for item in obj: you logic here</code>. True or False test, <code>if obj:, if item in obj:</code>, Conversions, <code>str(obj)</code>. All per-object data is stored in <code>__dict__</code> attribute and you can refer to class using <code>__class__</code> attribute. What I like most is that you can define your own behavior by overriding the certain <code>__*__</code> method.</p>
+
+<h2>Iterators and Generators</h2>
+
+<p>Iterators have two protocols, <code>__iter__()</code> and <code>next()</code>.</p>
+
+<pre><code>it = iter(range(10))
+print zip(it, it)
+</code></pre>
+
+<p>Generators is lazy functions that return iterators, and you should use yield instead of return.</p>
+
+<pre><code>def map(func, iterable):
+    """One do by yourself map function"""
+    results = []
+    for item in iterable:
+        results.append(func(item))
+    return results
+
+def gmap(func, iterable):
+    for item in iterable:
+        yield func(item)
+
+def map2(func, iterable):
+    """turning iterator into one list"""
+    return list(gmap(func, iterable))
+
+list1 = [1, 2, 3, 4, 5]
+import math
+def square(num):
+    return math.pow(num, 2)
+list2 = map(square, list1)
+list3 = map2(square, list1)
+</code></pre>
+
+<h2>Decorators</h2>
+
+<p>One decorator must return callables. Decorators that take extra arguments must return callables that return callables.<br/>
+Ok, I am gonna talk a little bit more on this topic. first of all, why are we using decorator, do not repeat yourself, that is why, when you are doing some thing same over and over again, decorator is the right tool for you.</p>
+
+<pre><code>def spam(func):
+    def wrapper(*args, **kwargs):
+        for i in range(10):
+            func(*args, **kwargs)
+    return wrapper
+
+@spam  #syntactic sugar   talk = spam(talk)
+def talk(word):
+    """talk docstring"""
+    print word
+talk('fsp')
+print talk.__doc__
+</code></pre>
+
+<p>It works fine, whenever you want to repeat a function for 10 times, you can use this decorator. Now here is the problem, what if I want to repeat 11 times, another decorator? No!!!</p>
+
+<pre><code>def spam(repeats):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for i in range(repeats):
+                func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+@spam(11)
+def talk(word):
+    print word
+</code></pre>
+
+<p>Pretty good by far, not enough though, we can see that talk function has one docstring, however it is lost for wrapper has no docstring, of course we can add it by <code>wrapper.__doc__ = func.__doc__</code>, however, what about name attribute of the function and we do not want to do that everytime we write a decorator, ok, think about it, what we are gonna need? We need one decorator, we need one decorator that return a wrapper which has everything the func shoud have. Ok, python provides us with that, so import it then.</p>
+
+<pre><code>from functools import wraps
+def spam(repeats):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            for i in range(repeats):
+                func(*args, **kwargs)
+        return wrapper
+    return decorator
+</code></pre>
+
+<p>Done!</p>
+
+<h2>New-style class</h2>
+
+<p>Classic classes and instances are separate types. In new-style class, the type of the instance is that class. Except for this, there are lots of new general mechanisms. <br/>
+I will introduce a few things about new-style class here, and most of the features I am going to talk about is based on new-style class.</p>
+
+<pre><code>class A():
+    def met(self):
+        print 'A.met'
+class B(A):
+    pass
+class C(A):
+    def met(self):
+        print 'C.met'
+class D(B, C):
+    pass
+d1 = D()
+d1.met()
+</code></pre>
+
+<p>The result is gonna be &lsquo;A.met&rsquo; which is no what we want. So here is the thing, D is the child class of B and C, B and C inherit from A, the classic class follow a left-to-right and deep-first searching pattern when it is looking for a father attribute, so we have D &ndash; B &ndash; A &ndash; C &ndash; A, A is searched first, as a result, even we override the met method in C, python still use the met of A class. That is wrong, and with new-style class, no worries.</p>
+
+<pre><code># new style class
+class A1(object):
+    def met(self):
+        print 'A1.met'
+class B1(A1):
+    pass
+class C1(A1):
+    def met(self):
+        print 'C1.met'
+class D1(B1, C1):
+    pass
+d2 = D1()
+d2.met()
+</code></pre>
+
+<p>We have &lsquo;C1.met&rsquo; now, the problem is what if C1 and B1 class both use <code>A1.met(self)</code> inside their met method, then we are going to get two &lsquo;A1.met&rsquo; ouput, we have super to deal with this.</p>
+
+<pre><code>class A2(object):
+    def met(self):
+        print 'A2.met'
+class B2(A2):
+    def met(self):
+        print 'B2.met'
+        super(B2, self).met()
+class C2(A2):
+    def met(self):
+        print 'C2.met'
+        super(C2, self).met()
+class D2(B2, C2):
+    def met(self):
+        print 'D2.met'
+        super(D2, self).met()
+d3 = D2()
+d3.met()
+</code></pre>
+
+<p><em>To be continued…………</em></p>
 ]]></content>
   </entry>
   
