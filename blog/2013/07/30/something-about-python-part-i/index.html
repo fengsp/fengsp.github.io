@@ -97,28 +97,52 @@
 
 <p>No basic things like if or for loop statement is going to be mentioned. Let us begin with one class and one function.</p>
 
-<pre><code>class Foo(object):
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="k">class</span> <span class="nc">Foo</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+</span><span class='line'>  
+</span><span class='line'>  <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class='line'>      <span class="bp">self</span><span class="o">.</span><span class="n">foo</span> <span class="o">=</span> <span class="s">&#39;foo&#39;</span>
+</span><span class='line'>  
+</span><span class='line'><span class="n">foo</span> <span class="o">=</span> <span class="n">Foo</span><span class="p">()</span>
+</span></code></pre></td></tr></table></div></figure>
 
-    def __init__(self):
-        self.foo = 'foo'
 
-foo = Foo()
-</code></pre>
+
+
+<!-- more -->
+
 
 <p>We have a init function to initialize the class instance, the self argument is implicitly brought in when you call a instance method.</p>
 
-<pre><code>def func(arg1, arg2=foo)
-    print "We are inside func"
-    def inner_func(arg3=arg2):
-        print "entering inner_func"
-        return arg1, arg3
-    arg1 = arg2 = None
-    return inner_func
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="k">def</span> <span class="nf">func</span><span class="p">(</span><span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="o">=</span><span class="n">foo</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">print</span> <span class="s">&quot;We are inside func&quot;</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">inner_func</span><span class="p">(</span><span class="n">arg3</span><span class="o">=</span><span class="n">arg2</span><span class="p">):</span>
+</span><span class='line'>      <span class="k">print</span> <span class="s">&quot;entering inner_func&quot;</span>
+</span><span class='line'>      <span class="k">return</span> <span class="n">arg1</span><span class="p">,</span> <span class="n">arg3</span>
+</span><span class='line'>  <span class="n">arg1</span> <span class="o">=</span> <span class="n">arg2</span> <span class="o">=</span> <span class="bp">None</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">inner_func</span>
+</span><span class='line'>  
+</span><span class='line'><span class="n">foo</span><span class="o">.</span><span class="n">foo</span> <span class="o">=</span> <span class="s">&#39;foo2&#39;</span>
+</span><span class='line'><span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="s">&#39;fsp&#39;</span><span class="p">)()</span>
+</span><span class='line'><span class="k">print</span> <span class="n">arg1</span><span class="p">,</span> <span class="n">arg2</span><span class="o">.</span><span class="n">foo</span>
+</span></code></pre></td></tr></table></div></figure>
 
-foo.foo = 'foo2'
-arg1, arg2 = func('fsp')()
-print arg1, arg2.foo
-</code></pre>
 
 <p>So here we are getting None and foo2 as the result, what I want to mention here is that arguments of a function is initialized when the interpreter meets the def thing, once your def is done, everytime you call a function, the arg is actually the same thing. (Something weird might happen as a result of this, by the way, the body block is just compiled but not executed when met.)</p>
 
@@ -126,9 +150,12 @@ print arg1, arg2.foo
 
 <p>Variables are names, not containers. Everything is an object, everything is a reference, while variables are neither. Variables refer to objects and namespaces map names to objects. You can use module to organize code, every module is executed on first import, then they are cached in <code>sys.modules</code>. And <code>import</code> is syntactic sugar, which means that <code>mod = __import__("mod")</code>.</p>
 
-<pre><code>os = __import__('os')
-print os.path.dirname(__file__)
-</code></pre>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="n">os</span> <span class="o">=</span> <span class="nb">__import__</span><span class="p">(</span><span class="s">&#39;os&#39;</span><span class="p">)</span>
+</span><span class='line'><span class="k">print</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>So we have python objects, we have the concept of mutability and hashability. We have usual operators, <code>+ * / ** ^ &amp; ~ +=</code>.  You can access the attribute by using <code>obj.attr</code> and access Indexing things by <code>obj[idx]</code>. Calling something is simple, <code>obj(args…)</code>, Iteration is simple too, <code>for item in obj: you logic here</code>. True or False test, <code>if obj:, if item in obj:</code>, Conversions, <code>str(obj)</code>. All per-object data is stored in <code>__dict__</code> attribute and you can refer to class using <code>__class__</code> attribute. What I like most is that you can define your own behavior by overriding the certain <code>__*__</code> method.</p>
 
@@ -136,81 +163,141 @@ print os.path.dirname(__file__)
 
 <p>Iterators have two protocols, <code>__iter__()</code> and <code>next()</code>.</p>
 
-<pre><code>it = iter(range(10))
-print zip(it, it)
-</code></pre>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="n">it</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">))</span>
+</span><span class='line'><span class="k">print</span> <span class="nb">zip</span><span class="p">(</span><span class="n">it</span><span class="p">,</span> <span class="n">it</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>Generators is lazy functions that return iterators, and you should use yield instead of return.</p>
 
-<pre><code>def map(func, iterable):
-    """One do by yourself map function"""
-    results = []
-    for item in iterable:
-        results.append(func(item))
-    return results
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="k">def</span> <span class="nf">map</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">iterable</span><span class="p">):</span>
+</span><span class='line'>  <span class="sd">&quot;&quot;&quot;One do by yourself map function&quot;&quot;&quot;</span>
+</span><span class='line'>  <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+</span><span class='line'>  <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">iterable</span><span class="p">:</span>
+</span><span class='line'>      <span class="n">results</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">func</span><span class="p">(</span><span class="n">item</span><span class="p">))</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">results</span>
+</span><span class='line'>  
+</span><span class='line'><span class="k">def</span> <span class="nf">gmap</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">iterable</span><span class="p">):</span>
+</span><span class='line'>  <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">iterable</span><span class="p">:</span>
+</span><span class='line'>      <span class="k">yield</span> <span class="n">func</span><span class="p">(</span><span class="n">item</span><span class="p">)</span>
+</span><span class='line'>  
+</span><span class='line'><span class="k">def</span> <span class="nf">map2</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">iterable</span><span class="p">):</span>
+</span><span class='line'>  <span class="sd">&quot;&quot;&quot;turning iterator into one list&quot;&quot;&quot;</span>
+</span><span class='line'>  <span class="k">return</span> <span class="nb">list</span><span class="p">(</span><span class="n">gmap</span><span class="p">(</span><span class="n">func</span><span class="p">,</span> <span class="n">iterable</span><span class="p">))</span>
+</span><span class='line'>  
+</span><span class='line'><span class="n">list1</span> <span class="o">=</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">]</span>
+</span><span class='line'><span class="kn">import</span> <span class="nn">math</span>
+</span><span class='line'><span class="k">def</span> <span class="nf">square</span><span class="p">(</span><span class="n">num</span><span class="p">):</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">math</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="n">num</span><span class="p">,</span> <span class="mi">2</span><span class="p">)</span>
+</span><span class='line'><span class="n">list2</span> <span class="o">=</span> <span class="nb">map</span><span class="p">(</span><span class="n">square</span><span class="p">,</span> <span class="n">list1</span><span class="p">)</span>
+</span><span class='line'><span class="n">list3</span> <span class="o">=</span> <span class="n">map2</span><span class="p">(</span><span class="n">square</span><span class="p">,</span> <span class="n">list1</span><span class="p">)</span>
+</span></code></pre></td></tr></table></div></figure>
 
-def gmap(func, iterable):
-    for item in iterable:
-        yield func(item)
-
-def map2(func, iterable):
-    """turning iterator into one list"""
-    return list(gmap(func, iterable))
-
-list1 = [1, 2, 3, 4, 5]
-import math
-def square(num):
-    return math.pow(num, 2)
-list2 = map(square, list1)
-list3 = map2(square, list1)
-</code></pre>
 
 <h2>Decorators</h2>
 
 <p>One decorator must return callables. Decorators that take extra arguments must return callables that return callables.<br/>
 Ok, I am gonna talk a little bit more on this topic. first of all, why are we using decorator, do not repeat yourself, that is why, when you are doing some thing same over and over again, decorator is the right tool for you.</p>
 
-<pre><code>def spam(func):
-    def wrapper(*args, **kwargs):
-        for i in range(10):
-            func(*args, **kwargs)
-    return wrapper
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="k">def</span> <span class="nf">spam</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span><span class='line'>      <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+</span><span class='line'>          <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">wrapper</span>
+</span><span class='line'>  
+</span><span class='line'><span class="nd">@spam</span>  <span class="c">#syntactic sugar   talk = spam(talk)</span>
+</span><span class='line'><span class="k">def</span> <span class="nf">talk</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+</span><span class='line'>  <span class="sd">&quot;&quot;&quot;talk docstring&quot;&quot;&quot;</span>
+</span><span class='line'>  <span class="k">print</span> <span class="n">word</span>
+</span><span class='line'><span class="n">talk</span><span class="p">(</span><span class="s">&#39;fsp&#39;</span><span class="p">)</span>
+</span><span class='line'><span class="k">print</span> <span class="n">talk</span><span class="o">.</span><span class="n">__doc__</span>
+</span></code></pre></td></tr></table></div></figure>
 
-@spam  #syntactic sugar   talk = spam(talk)
-def talk(word):
-    """talk docstring"""
-    print word
-talk('fsp')
-print talk.__doc__
-</code></pre>
 
 <p>It works fine, whenever you want to repeat a function for 10 times, you can use this decorator. Now here is the problem, what if I want to repeat 11 times, another decorator? No!!!</p>
 
-<pre><code>def spam(repeats):
-    def decorator(func):
-        def wrapper(*args, **kwargs):
-            for i in range(repeats):
-                func(*args, **kwargs)
-        return wrapper
-    return decorator
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="k">def</span> <span class="nf">spam</span><span class="p">(</span><span class="n">repeats</span><span class="p">):</span>
+</span><span class='line'>  <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+</span><span class='line'>      <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span><span class='line'>          <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">repeats</span><span class="p">):</span>
+</span><span class='line'>              <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span class='line'>      <span class="k">return</span> <span class="n">wrapper</span>
+</span><span class='line'>  <span class="k">return</span> <span class="n">decorator</span>
+</span><span class='line'>  
+</span><span class='line'><span class="nd">@spam</span><span class="p">(</span><span class="mi">11</span><span class="p">)</span>
+</span><span class='line'><span class="k">def</span> <span class="nf">talk</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+</span><span class='line'>  <span class="k">print</span> <span class="n">word</span>
+</span></code></pre></td></tr></table></div></figure>
 
-@spam(11)
-def talk(word):
-    print word
-</code></pre>
 
 <p>Pretty good by far, not enough though, we can see that talk function has one docstring, however it is lost for wrapper has no docstring, of course we can add it by <code>wrapper.__doc__ = func.__doc__</code>, however, what about name attribute of the function and we do not want to do that everytime we write a decorator, ok, think about it, what we are gonna need? We need one decorator, we need one decorator that return a wrapper which has everything the func shoud have. Ok, python provides us with that, so import it then.</p>
 
-<pre><code>from functools import wraps
-def spam(repeats):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            for i in range(repeats):
-                func(*args, **kwargs)
-        return wrapper
-    return decorator
-</code></pre>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">wraps</span>
+</span><span class='line'><span class="k">def</span> <span class="nf">spam</span><span class="p">(</span><span class="n">repeats</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">decorator</span><span class="p">(</span><span class="n">func</span><span class="p">):</span>
+</span><span class='line'>        <span class="nd">@wraps</span><span class="p">(</span><span class="n">func</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">def</span> <span class="nf">wrapper</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+</span><span class='line'>            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">repeats</span><span class="p">):</span>
+</span><span class='line'>                <span class="n">func</span><span class="p">(</span><span class="o">*</span><span class="n">args</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+</span><span class='line'>        <span class="k">return</span> <span class="n">wrapper</span>
+</span><span class='line'>    <span class="k">return</span> <span class="n">decorator</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>Done!</p>
 
@@ -219,57 +306,100 @@ def spam(repeats):
 <p>Classic classes and instances are separate types. In new-style class, the type of the instance is that class. Except for this, there are lots of new general mechanisms. <br/>
 I will introduce a few things about new-style class here, and most of the features I am going to talk about is based on new-style class.</p>
 
-<pre><code>class A():
-    def met(self):
-        print 'A.met'
-class B(A):
-    pass
-class C(A):
-    def met(self):
-        print 'C.met'
-class D(B, C):
-    pass
-d1 = D()
-d1.met()
-</code></pre>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="k">class</span> <span class="nc">A</span><span class="p">():</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">met</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class='line'>        <span class="k">print</span> <span class="s">&#39;A.met&#39;</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">B</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">pass</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">C</span><span class="p">(</span><span class="n">A</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">met</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class='line'>        <span class="k">print</span> <span class="s">&#39;C.met&#39;</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">D</span><span class="p">(</span><span class="n">B</span><span class="p">,</span> <span class="n">C</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">pass</span>
+</span><span class='line'><span class="n">d1</span> <span class="o">=</span> <span class="n">D</span><span class="p">()</span>
+</span><span class='line'><span class="n">d1</span><span class="o">.</span><span class="n">met</span><span class="p">()</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>The result is gonna be &lsquo;A.met&rsquo; which is no what we want. So here is the thing, D is the child class of B and C, B and C inherit from A, the classic class follow a left-to-right and deep-first searching pattern when it is looking for a father attribute, so we have D &ndash; B &ndash; A &ndash; C &ndash; A, A is searched first, as a result, even we override the met method in C, python still use the met of A class. That is wrong, and with new-style class, no worries.</p>
 
-<pre><code># new style class
-class A1(object):
-    def met(self):
-        print 'A1.met'
-class B1(A1):
-    pass
-class C1(A1):
-    def met(self):
-        print 'C1.met'
-class D1(B1, C1):
-    pass
-d2 = D1()
-d2.met()
-</code></pre>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="k">class</span> <span class="nc">A1</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">met</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class='line'>        <span class="k">print</span> <span class="s">&#39;A1.met&#39;</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">B1</span><span class="p">(</span><span class="n">A1</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">pass</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">C1</span><span class="p">(</span><span class="n">A1</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">met</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class='line'>        <span class="k">print</span> <span class="s">&#39;C1.met&#39;</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">D1</span><span class="p">(</span><span class="n">B1</span><span class="p">,</span> <span class="n">C1</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">pass</span>
+</span><span class='line'><span class="n">d2</span> <span class="o">=</span> <span class="n">D1</span><span class="p">()</span>
+</span><span class='line'><span class="n">d2</span><span class="o">.</span><span class="n">met</span><span class="p">()</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p>We have &lsquo;C1.met&rsquo; now, the problem is what if C1 and B1 class both use <code>A1.met(self)</code> inside their met method, then we are going to get two &lsquo;A1.met&rsquo; ouput, we have super to deal with this.</p>
 
-<pre><code>class A2(object):
-    def met(self):
-        print 'A2.met'
-class B2(A2):
-    def met(self):
-        print 'B2.met'
-        super(B2, self).met()
-class C2(A2):
-    def met(self):
-        print 'C2.met'
-        super(C2, self).met()
-class D2(B2, C2):
-    def met(self):
-        print 'D2.met'
-        super(D2, self).met()
-d3 = D2()
-d3.met()
-</code></pre>
+<figure class='code'> <div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+</pre></td><td class='code'><pre><code class='python'><span class='line'><span class="k">class</span> <span class="nc">A2</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">met</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class='line'>        <span class="k">print</span> <span class="s">&#39;A2.met&#39;</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">B2</span><span class="p">(</span><span class="n">A2</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">met</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class='line'>        <span class="k">print</span> <span class="s">&#39;B2.met&#39;</span>
+</span><span class='line'>        <span class="nb">super</span><span class="p">(</span><span class="n">B2</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">met</span><span class="p">()</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">C2</span><span class="p">(</span><span class="n">A2</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">met</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class='line'>        <span class="k">print</span> <span class="s">&#39;C2.met&#39;</span>
+</span><span class='line'>        <span class="nb">super</span><span class="p">(</span><span class="n">C2</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">met</span><span class="p">()</span>
+</span><span class='line'><span class="k">class</span> <span class="nc">D2</span><span class="p">(</span><span class="n">B2</span><span class="p">,</span> <span class="n">C2</span><span class="p">):</span>
+</span><span class='line'>    <span class="k">def</span> <span class="nf">met</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+</span><span class='line'>        <span class="k">print</span> <span class="s">&#39;D2.met&#39;</span>
+</span><span class='line'>        <span class="nb">super</span><span class="p">(</span><span class="n">D2</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">met</span><span class="p">()</span>
+</span><span class='line'><span class="n">d3</span> <span class="o">=</span> <span class="n">D2</span><span class="p">()</span>
+</span><span class='line'><span class="n">d3</span><span class="o">.</span><span class="n">met</span><span class="p">()</span>
+</span></code></pre></td></tr></table></div></figure>
+
 
 <p><em>To be continued…………</em></p>
 </div>
@@ -320,6 +450,8 @@ d3.met()
         <a class="basic-alignment left" href="/blog/2013/07/18/welcome-to-my-blog/" title="Previous Post: Welcome to my blog">&laquo; Welcome to my blog</a>
       
       
+        <a class="basic-alignment right" href="/blog/2013/07/30/something-about-python-part-ii/" title="Next Post: About python: Part II">About python: Part II &raquo;</a>
+      
     </p>
   </footer>
 </article>
@@ -331,6 +463,10 @@ d3.met()
     <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2013/07/30/something-about-python-part-ii/">About Python: Part II</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2013/07/30/something-about-python-part-i/">About Python: Part I</a>
