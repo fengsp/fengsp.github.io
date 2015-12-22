@@ -1,4 +1,0 @@
-User-agent: *
-Disallow: 
-
-Sitemap: http://fengsp.github.io/sitemap.xml 
