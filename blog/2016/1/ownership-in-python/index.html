@@ -31,6 +31,7 @@
       
       on 2016-01-09
     </p>
+    <br/>
     <p>In C or C++, we are responsible for the allocation and deallocation of memory.
 Every piece of memory allocated should eventually be freed, otherwise we have
 a memory leak.  It is really hard to prevent leaks from happening by manual
@@ -55,15 +56,15 @@ the owners hold on to the object longer than you.  <strong>The ownership in Pyth
 means you keep a reference to one object.</strong>  All owners of one object should
 call <code>Py_DECREF(x)</code> after they finish using the object, otherwise a memory
 leak is created.  Here is one simple example:</p>
-<div class="highlight"><pre><span class="k">def</span> <span class="nf">hello</span><span class="p">():</span>
-    <span class="n">s</span> <span class="o">=</span> <span class="s">&#39;hi&#39;</span>  <span class="c"># s keeps a reference to &#39;hi&#39; and have ownership</span>
-    <span class="k">print</span> <span class="n">s</span>   <span class="c"># use &#39;hi&#39; for something</span>
-<span class="n">hello</span><span class="p">()</span>       <span class="c"># s finishes and decreases the reference count</span>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">hello</span><span class="p">():</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="s1">&#39;hi&#39;</span>  <span class="c1"># s keeps a reference to &#39;hi&#39; and have ownership</span>
+    <span class="k">print</span> <span class="n">s</span>   <span class="c1"># use &#39;hi&#39; for something</span>
+<span class="n">hello</span><span class="p">()</span>       <span class="c1"># s finishes and decreases the reference count</span>
 </pre></div>
 <p>It is also possible to transfer the ownership to others, never heard of it?
 Trust me, it happens everywhere, everytime we create a new object, we need to
 pass ownership to the receiver:</p>
-<div class="highlight"><pre><span class="n">foo</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>  <span class="c"># we need the bytecode of it</span>
+<div class="highlight"><pre><span></span><span class="n">foo</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>  <span class="c1"># we need the bytecode of it</span>
 
 <span class="mi">0</span> <span class="n">LOAD_NAME</span>                <span class="mi">0</span> <span class="p">(</span><span class="n">a</span><span class="p">)</span>
 <span class="mi">3</span> <span class="n">LOAD_NAME</span>                <span class="mi">1</span> <span class="p">(</span><span class="n">b</span><span class="p">)</span>
@@ -77,7 +78,7 @@ create a new tuple object, the object leaves the <code>PyTuple_New</code> functi
 and <code>Py_DECREF(x)</code> is not called, afterwards, the ownership is passed to
 Python Virtual Machine data stack, the VM passes it to the <code>foo</code> variable.</p>
 <p>What if I write code like this:</p>
-<div class="highlight"><pre><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>  <span class="c"># no final receiver for the ownership</span>
+<div class="highlight"><pre><span></span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>  <span class="c1"># no final receiver for the ownership</span>
 
 <span class="mi">6</span> <span class="n">BUILD_TUPLE</span>
 <span class="mi">9</span> <span class="n">POP_TOP</span>
@@ -94,7 +95,7 @@ Python itself makes sure that all returned object has the ownership.  Things
 get a little uncertain if you call a C function from Python, in order to make
 things work right, as a Python C Extension developer, you have to return
 an object that has its ownership:</p>
-<div class="highlight"><pre><span class="k">static</span> <span class="n">PyObject</span> <span class="o">*</span>
+<div class="highlight"><pre><span></span><span class="k">static</span> <span class="n">PyObject</span> <span class="o">*</span>
 <span class="nf">get_first_item</span><span class="p">(</span><span class="n">PyObject</span> <span class="o">*</span><span class="n">list</span><span class="p">)</span>
 <span class="p">{</span>
     <span class="n">PyObject</span> <span class="o">*</span><span class="n">item</span> <span class="o">=</span> <span class="n">PyList_GetItem</span><span class="p">(</span><span class="n">list</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>  <span class="cm">/* do not have ownership */</span>
@@ -115,7 +116,7 @@ an object that has its ownership:</p>
 
 
       <footer>
-        <p>&copy; Copyright 2015 by Shipeng Feng.</p>
+        <p>&copy; Copyright 2016 by Shipeng Feng.</p>
         <p>Content licensed under the Creative Commons attribution-noncommercial-sharealike License.</p>
       </footer>
     </div>

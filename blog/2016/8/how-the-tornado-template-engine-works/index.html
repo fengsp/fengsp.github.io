@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>How a template engine works — Shipeng Feng's Writings</title>
+    <link rel="stylesheet" href="../../../../static/gen/styles.css?h=336c0b29">
+    <link rel="stylesheet" href="../../../../static/pygments.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="nav">
+        <a href="../../../../" >Welcome</a>
+        
+          <a href="../../../../blog/"  class="active">Blog</a>
+        
+          <a href="../../../../projects/" >Projects</a>
+        
+          <a href="../../../../about/" >About</a>
+        
+      </div>
+
+      
+  <div class="blog-post">
+    <h2>How a template engine works</h2>
+    <p class="meta">
+      written by
+      
+        <a href="https://twitter.com/_fengsp">Shipeng Feng</a>
+      
+      on 2016-08-01
+    </p>
+    <br/>
+    <p>I have used template engines for a long time and finally have some time to find
+out how a template engine works.</p>
+<h3>Introduction</h3>
+<p>Briefly, a template engine is a tool that you can use to do programming tasks
+involving a lot of textual data.  The most common usage is HTML generation
+in web applications.  Specifically in Python, we have a few options right now
+if you want one template engine, like <a href="http://jinja.pocoo.org/">jinja</a> or
+<a href="http://www.makotemplates.org/">mako</a>.  Here we are going to find out how a template
+engine works by digging in the template module of the tornado web framework, it is a
+simple system so we can focus on the basic ideas of the process.</p>
+<p>Before we go into the implementation detail, let's look at the simple API usage first:</p>
+<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">tornado</span> <span class="kn">import</span> <span class="n">template</span>
+
+<span class="n">PAGE_HTML</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">&lt;html&gt;</span>
+<span class="s2">  Hello, {{ username }}!</span>
+<span class="s2">  &lt;ul&gt;</span>
+<span class="s2">    {</span><span class="si">% f</span><span class="s2">or job in job_list %}</span>
+<span class="s2">      &lt;li&gt;{{ job }}&lt;/li&gt;</span>
+<span class="s2">    {</span><span class="si">% e</span><span class="s2">nd %}</span>
+<span class="s2">  &lt;/ul&gt;</span>
+<span class="s2">&lt;/html&gt;</span>
+<span class="s2">&quot;&quot;&quot;</span>
+<span class="n">t</span> <span class="o">=</span> <span class="n">template</span><span class="o">.</span><span class="n">Template</span><span class="p">(</span><span class="n">PAGE_HTML</span><span class="p">)</span>
+<span class="k">print</span> <span class="n">t</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">username</span><span class="o">=</span><span class="s1">&#39;John&#39;</span><span class="p">,</span> <span class="n">job_list</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;engineer&#39;</span><span class="p">])</span>
+</pre></div>
+<p>Here the user's name will be dynamic in the page html, so are a list of jobs.  You
+can install <code>tornado</code> and run the code to see the output.</p>
+<h3>Implementation</h3>
+<p>If we look at the <code>PAGE_HTML</code> closely, we could easily find out that a template string
+has two parts, the static literal text part and the dynamic part.  We use special
+notation to distinguish the dynamic part.  In the whole, the template engine should
+take the template string and output the static part as it is, it also needs to
+handle the dynamic pieces with the given context and produce the right string result.
+So basically a template engine is just one Python function:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">template_engine</span><span class="p">(</span><span class="n">template_string</span><span class="p">,</span> <span class="o">**</span><span class="n">context</span><span class="p">):</span>
+    <span class="c1"># process here</span>
+    <span class="k">return</span> <span class="n">result_string</span>
+</pre></div>
+<p>During the processing procedure, the template engine has two phases:</p>
+<ul>
+<li><em>parsing</em></li>
+<li><em>rendering</em></li>
+</ul>
+<p>The parsing stage takes the template string and produces something that could be
+rendered.  Consider the template string as source code, the parsing tool could be
+either a programming language interpreter or a programming language compiler.  If
+the tool is an interpreter, parsing produces a data structure, the rendering tool
+will walk through the structure and produces the result text.  The Django template
+engine parsing tool is an interpreter.  Otherwise, parsing produces some executable
+code, the rendering tool does nothing but executes the code and produces the result.
+The Jinja2, Mako and Tornado template module are all using a compiler as parsing tool.</p>
+<h3>Compiling</h3>
+<p>As said above, we now need to parse the template string, and the parsing tool in
+tornado template module compiles templates to Python code.  Our parsing tool is
+simply one Python function that does Python code generation:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">parse_template</span><span class="p">(</span><span class="n">template_string</span><span class="p">):</span>
+    <span class="c1"># compilation</span>
+    <span class="k">return</span> <span class="n">python_source_code</span>
+</pre></div>
+<p>Before we get to the implementation of <code>parse_template</code>, let's see the code it
+produces, here is an example template source string:</p>
+<div class="highlight"><pre><span></span><span class="p">&lt;</span><span class="nt">html</span><span class="p">&gt;</span>
+  Hello, <span class="cp">{{</span> <span class="nv">username</span> <span class="cp">}}</span>!
+  <span class="p">&lt;</span><span class="nt">ul</span><span class="p">&gt;</span>
+    <span class="cp">{%</span> <span class="k">for</span> <span class="nv">job</span> <span class="k">in</span> <span class="nv">jobs</span> <span class="cp">%}</span>
+      <span class="p">&lt;</span><span class="nt">li</span><span class="p">&gt;</span><span class="cp">{{</span> <span class="nv">job.name</span> <span class="cp">}}</span><span class="p">&lt;/</span><span class="nt">li</span><span class="p">&gt;</span>
+    <span class="cp">{%</span> <span class="k">end</span> <span class="cp">%}</span>
+  <span class="p">&lt;/</span><span class="nt">ul</span><span class="p">&gt;</span>
+<span class="p">&lt;/</span><span class="nt">html</span><span class="p">&gt;</span>
+</pre></div>
+<p>Our <code>parse_template</code> function will compile this template to Python code, which is
+just one function, the simplified version is:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">_execute</span><span class="p">():</span>
+    <span class="n">_buffer</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&lt;html&gt;</span><span class="se">\n</span><span class="s1">  Hello, &#39;</span><span class="p">)</span>
+    <span class="n">_tmp</span> <span class="o">=</span> <span class="n">username</span>
+    <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">_tmp</span><span class="p">))</span>
+    <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;!</span><span class="se">\n</span><span class="s1">  &lt;ul&gt;</span><span class="se">\n</span><span class="s1">    &#39;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">job</span> <span class="ow">in</span> <span class="n">jobs</span><span class="p">:</span>
+        <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">      &lt;li&gt;&#39;</span><span class="p">)</span>
+        <span class="n">_tmp</span> <span class="o">=</span> <span class="n">job</span><span class="o">.</span><span class="n">name</span>
+        <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">_tmp</span><span class="p">))</span>
+        <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;/li&gt;</span><span class="se">\n</span><span class="s1">    &#39;</span><span class="p">)</span>
+    <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &lt;/ul&gt;</span><span class="se">\n</span><span class="s1">&lt;/html&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="s1">&#39;&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">_buffer</span><span class="p">)</span>
+</pre></div>
+<p>Now our template is parsed into a function called <code>_execute</code>, this function access
+all context variables from global namespace.  This function creates a list of strings
+and join them together as the result string.  The <code>username</code> is put in a local name
+<code>_tmp</code>, looking up a local name is much faster than looking up a global.  There are
+other optimizations that can be done here, like:</p>
+<div class="highlight"><pre><span></span><span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;hello&#39;</span><span class="p">)</span>
+
+<span class="n">_append_buffer</span> <span class="o">=</span> <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span>
+<span class="c1"># faster for repeated use</span>
+<span class="n">_append_buffer</span><span class="p">(</span><span class="s1">&#39;hello&#39;</span><span class="p">)</span>
+</pre></div>
+<p>Expressions in <code>{{ ... }}</code> are evaluated and appended to the string buffer list.
+In the tornado template module, there is no restrictions on the expressions you can
+include in your statements, if and for blocks get translated exactly into Python.</p>
+<h3>The Code</h3>
+<p>Let's see the real implementation now.  The core interface that we are using is the
+<code>Template</code> class, when we create one <code>Template</code> object, we compile the template string
+and later we can use it to render a given context.  We only need to compile once and
+you can cache the template object anywhere, the simplified version of constructor:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">Template</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">template_string</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">code</span> <span class="o">=</span> <span class="n">parse_template</span><span class="p">(</span><span class="n">template_string</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">compiled</span> <span class="o">=</span> <span class="nb">compile</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">code</span><span class="p">,</span> <span class="s1">&#39;&lt;string&gt;&#39;</span><span class="p">,</span> <span class="s1">&#39;exec&#39;</span><span class="p">)</span>
+</pre></div>
+<p>The <code>compile</code> will compile the <em>source</em> into a code object.  We can execute it
+later with an <code>exec</code> statement.  Now let's build the <code>parse_template</code> function,
+firstly we need to parse our template string into a list of nodes that knows
+how to generate Python code, we need a function called <code>_parse</code>, we will see the
+function later, we need some helpers now, to help with reading through the template
+file, we have the <code>_TemplateReader</code> class, which handles the reading for us as we
+consume the template file.  We need to start from the begining and keep going ahead
+to find some special notations, the <code>_TemplateReader</code> will keep the current position
+and give us ways to do it:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">_TemplateReader</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">text</span> <span class="o">=</span> <span class="n">text</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">find</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">needle</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="n">pos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span>
+        <span class="n">start</span> <span class="o">+=</span> <span class="n">pos</span>
+        <span class="k">if</span> <span class="n">end</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">needle</span><span class="p">,</span> <span class="n">start</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">end</span> <span class="o">+=</span> <span class="n">pos</span>
+            <span class="n">index</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="n">needle</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="n">index</span> <span class="o">-=</span> <span class="n">pos</span>
+        <span class="k">return</span> <span class="n">index</span>
+
+    <span class="k">def</span> <span class="nf">consume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">count</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span>
+        <span class="n">newpos</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">+</span> <span class="n">count</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">:</span><span class="n">newpos</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">=</span> <span class="n">newpos</span>
+        <span class="k">return</span> <span class="n">s</span>
+
+    <span class="k">def</span> <span class="nf">remaining</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">)</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">pos</span>
+
+    <span class="k">def</span> <span class="nf">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">remaining</span><span class="p">()</span>
+
+    <span class="k">def</span> <span class="nf">__getitem__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">key</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span> <span class="o">+</span> <span class="n">key</span><span class="p">]</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">text</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">pos</span><span class="p">:]</span>
+</pre></div>
+<p>To help with generating the Python code, we need the <code>_CodeWriter</code> class, this class
+writes lines of codes and manages indentation, also it is one Python context manager:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">_CodeWriter</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span> <span class="o">=</span> <span class="n">cStringIO</span><span class="o">.</span><span class="n">StringIO</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_indent</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="k">def</span> <span class="nf">indent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">indent_size</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_indent</span>
+
+    <span class="k">def</span> <span class="nf">__enter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_indent</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">*</span><span class="n">args</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_indent</span> <span class="o">-=</span> <span class="mi">1</span>
+
+    <span class="k">def</span> <span class="nf">write_line</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">line</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">indent</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">indent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_indent</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">xrange</span><span class="p">(</span><span class="n">indent</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;    &quot;</span><span class="p">)</span>
+        <span class="k">print</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="p">,</span> <span class="n">line</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">buffer</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
+</pre></div>
+<p>In the begining of the <code>parse_template</code>, we create one template reader first:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">parse_template</span><span class="p">(</span><span class="n">template_string</span><span class="p">):</span>
+    <span class="n">reader</span> <span class="o">=</span> <span class="n">_TemplateReader</span><span class="p">(</span><span class="n">template_string</span><span class="p">)</span>
+    <span class="n">file_node</span> <span class="o">=</span> <span class="n">_File</span><span class="p">(</span><span class="n">_parse</span><span class="p">(</span><span class="n">reader</span><span class="p">))</span>
+    <span class="n">writer</span> <span class="o">=</span> <span class="n">_CodeWriter</span><span class="p">()</span>
+    <span class="n">file_node</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">writer</span><span class="p">)</span>
+    <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="n">writer</span><span class="p">)</span>
+</pre></div>
+<p>Then we pass the reader to the <code>_parse</code> function and produces a list of nodes.
+All of there nodes are the child nodes of the template file node.  We create
+one CodeWriter object, the file node writes Python code into the CodeWriter,
+and we return the generated Python code.  The <code>_Node</code> class would handle the Python
+code generation for a specific case, we will see it later.  Now let's go back to our
+<code>_parse</code> function:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">_parse</span><span class="p">(</span><span class="n">reader</span><span class="p">,</span> <span class="n">in_block</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">_ChunkList</span><span class="p">([])</span>
+    <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+        <span class="c1"># Find next template directive</span>
+        <span class="n">curly</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">while</span> <span class="bp">True</span><span class="p">:</span>
+            <span class="n">curly</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">,</span> <span class="n">curly</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">curly</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">curly</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">==</span> <span class="n">reader</span><span class="o">.</span><span class="n">remaining</span><span class="p">():</span>
+                <span class="c1"># EOF</span>
+                <span class="k">if</span> <span class="n">in_block</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">ParseError</span><span class="p">(</span><span class="s2">&quot;Missing {</span><span class="si">%%</span><span class="s2"> end </span><span class="si">%%</span><span class="s2">} block for </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span>
+                                     <span class="n">in_block</span><span class="p">)</span>
+                <span class="n">body</span><span class="o">.</span><span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_Text</span><span class="p">(</span><span class="n">reader</span><span class="o">.</span><span class="n">consume</span><span class="p">()))</span>
+                <span class="k">return</span> <span class="n">body</span>
+            <span class="c1"># If the first curly brace is not the start of a special token,</span>
+            <span class="c1"># start searching from the character after it</span>
+            <span class="k">if</span> <span class="n">reader</span><span class="p">[</span><span class="n">curly</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="ow">not</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;{&quot;</span><span class="p">,</span> <span class="s2">&quot;%&quot;</span><span class="p">):</span>
+                <span class="n">curly</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+            <span class="c1"># When there are more than 2 curlies in a row, use the</span>
+            <span class="c1"># innermost ones.  This is useful when generating languages</span>
+            <span class="c1"># like latex where curlies are also meaningful</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">curly</span> <span class="o">+</span> <span class="mi">2</span> <span class="o">&lt;</span> <span class="n">reader</span><span class="o">.</span><span class="n">remaining</span><span class="p">()</span> <span class="ow">and</span>
+                <span class="n">reader</span><span class="p">[</span><span class="n">curly</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;{&#39;</span> <span class="ow">and</span> <span class="n">reader</span><span class="p">[</span><span class="n">curly</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;{&#39;</span><span class="p">):</span>
+                <span class="n">curly</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">continue</span>
+            <span class="k">break</span>
+</pre></div>
+<p>We loop forever to find a template directive in the remaining file, if we reach
+the end of the file, we append the text node and exit, otherwise, we have found
+one template directive.</p>
+<div class="highlight"><pre><span></span>        <span class="c1"># Append any text before the special token</span>
+        <span class="k">if</span> <span class="n">curly</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">body</span><span class="o">.</span><span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_Text</span><span class="p">(</span><span class="n">reader</span><span class="o">.</span><span class="n">consume</span><span class="p">(</span><span class="n">curly</span><span class="p">)))</span>
+</pre></div>
+<p>Before we handle the special token, we append the text node if there is static part.</p>
+<div class="highlight"><pre><span></span>        <span class="n">start_brace</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">consume</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</pre></div>
+<p>Get our start brace, if should be <code>'{{'</code> or <code>'{%'</code>.</p>
+<div class="highlight"><pre><span></span>        <span class="c1"># Expression</span>
+        <span class="k">if</span> <span class="n">start_brace</span> <span class="o">==</span> <span class="s2">&quot;{{&quot;</span><span class="p">:</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;}}&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">end</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">reader</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ParseError</span><span class="p">(</span><span class="s2">&quot;Missing end expression }}&quot;</span><span class="p">)</span>
+            <span class="n">contents</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">consume</span><span class="p">(</span><span class="n">end</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">reader</span><span class="o">.</span><span class="n">consume</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">contents</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ParseError</span><span class="p">(</span><span class="s2">&quot;Empty expression&quot;</span><span class="p">)</span>
+            <span class="n">body</span><span class="o">.</span><span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">_Expression</span><span class="p">(</span><span class="n">contents</span><span class="p">))</span>
+            <span class="k">continue</span>
+</pre></div>
+<p>The start brace is <code>'{{'</code> and we have an expression here, just get the contents
+of the expression and append one <code>_Expression</code> node.</p>
+<div class="highlight"><pre><span></span>        <span class="c1"># Block</span>
+        <span class="k">assert</span> <span class="n">start_brace</span> <span class="o">==</span> <span class="s2">&quot;{%&quot;</span><span class="p">,</span> <span class="n">start_brace</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;%}&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">end</span> <span class="o">==</span> <span class="o">-</span><span class="mi">1</span> <span class="ow">or</span> <span class="n">reader</span><span class="o">.</span><span class="n">find</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">end</span><span class="p">)</span> <span class="o">!=</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ParseError</span><span class="p">(</span><span class="s2">&quot;Missing end block %}&quot;</span><span class="p">)</span>
+        <span class="n">contents</span> <span class="o">=</span> <span class="n">reader</span><span class="o">.</span><span class="n">consume</span><span class="p">(</span><span class="n">end</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="n">reader</span><span class="o">.</span><span class="n">consume</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">contents</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ParseError</span><span class="p">(</span><span class="s2">&quot;Empty block tag ({</span><span class="si">% %</span><span class="s2">})&quot;</span><span class="p">)</span>
+        <span class="n">operator</span><span class="p">,</span> <span class="n">space</span><span class="p">,</span> <span class="n">suffix</span> <span class="o">=</span> <span class="n">contents</span><span class="o">.</span><span class="n">partition</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">)</span>
+        <span class="c1"># End tag</span>
+        <span class="k">if</span> <span class="n">operator</span> <span class="o">==</span> <span class="s2">&quot;end&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">in_block</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">ParseError</span><span class="p">(</span><span class="s2">&quot;Extra {</span><span class="si">% e</span><span class="s2">nd %} block&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">body</span>
+        <span class="k">elif</span> <span class="n">operator</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">&quot;try&quot;</span><span class="p">,</span> <span class="s2">&quot;if&quot;</span><span class="p">,</span> <span class="s2">&quot;for&quot;</span><span class="p">,</span> <span class="s2">&quot;while&quot;</span><span class="p">):</span>
+            <span class="c1"># parse inner body recursively</span>
+            <span class="n">block_body</span> <span class="o">=</span> <span class="n">_parse</span><span class="p">(</span><span class="n">reader</span><span class="p">,</span> <span class="n">operator</span><span class="p">)</span>
+            <span class="n">block</span> <span class="o">=</span> <span class="n">_ControlBlock</span><span class="p">(</span><span class="n">contents</span><span class="p">,</span> <span class="n">block_body</span><span class="p">)</span>
+            <span class="n">body</span><span class="o">.</span><span class="n">chunks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">block</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">ParseError</span><span class="p">(</span><span class="s2">&quot;unknown operator: </span><span class="si">%r</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="n">operator</span><span class="p">)</span>
+</pre></div>
+<p>We have a block here, normally we would get the block body recursively and append
+a <code>_ControlBlock</code> node, the block body should be a list of nodes.  If we encounter
+an <code>{% end %}</code>, the block ends and we exit the function.</p>
+<p>It is time to find out the secrets of <code>_Node</code> class, it is quite simple:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">_Node</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">writer</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">NotImplementedError</span><span class="p">()</span>
+</pre></div>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">_ChunkList</span><span class="p">(</span><span class="n">_Node</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">chunks</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">chunks</span> <span class="o">=</span> <span class="n">chunks</span>
+
+    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">writer</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">chunks</span><span class="p">:</span>
+            <span class="n">chunk</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">writer</span><span class="p">)</span>
+</pre></div>
+<p>A <code>_ChunkList</code> is just a list of nodes.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">_File</span><span class="p">(</span><span class="n">_Node</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">body</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="n">body</span>
+
+    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">writer</span><span class="p">):</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">write_line</span><span class="p">(</span><span class="s2">&quot;def _execute():&quot;</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">writer</span><span class="o">.</span><span class="n">indent</span><span class="p">():</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">write_line</span><span class="p">(</span><span class="s2">&quot;_buffer = []&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">writer</span><span class="p">)</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">write_line</span><span class="p">(</span><span class="s2">&quot;return &#39;&#39;.join(_buffer)&quot;</span><span class="p">)</span>
+</pre></div>
+<p>A <code>_File</code> node write the <code>_execute</code> function to the CodeWriter.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">_Expression</span><span class="p">(</span><span class="n">_Node</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">expression</span> <span class="o">=</span> <span class="n">expression</span>
+
+    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">writer</span><span class="p">):</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">write_line</span><span class="p">(</span><span class="s2">&quot;_tmp = </span><span class="si">%s</span><span class="s2">&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">expression</span><span class="p">)</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">write_line</span><span class="p">(</span><span class="s2">&quot;_buffer.append(str(_tmp))&quot;</span><span class="p">)</span>
+
+
+<span class="k">class</span> <span class="nc">_Text</span><span class="p">(</span><span class="n">_Node</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">value</span> <span class="o">=</span> <span class="n">value</span>
+
+    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">writer</span><span class="p">):</span>
+        <span class="n">value</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">value</span>
+        <span class="k">if</span> <span class="n">value</span><span class="p">:</span>
+            <span class="n">writer</span><span class="o">.</span><span class="n">write_line</span><span class="p">(</span><span class="s1">&#39;_buffer.append(</span><span class="si">%r</span><span class="s1">)&#39;</span> <span class="o">%</span> <span class="n">value</span><span class="p">)</span>
+</pre></div>
+<p>The <code>_Text</code> and <code>_Expression</code> node are also really simple, just append what you
+get from the template source.</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">_ControlBlock</span><span class="p">(</span><span class="n">_Node</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">statement</span><span class="p">,</span> <span class="n">body</span><span class="o">=</span><span class="bp">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">statement</span> <span class="o">=</span> <span class="n">statement</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">body</span> <span class="o">=</span> <span class="n">body</span>
+
+    <span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">writer</span><span class="p">):</span>
+        <span class="n">writer</span><span class="o">.</span><span class="n">write_line</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">:&quot;</span> <span class="o">%</span> <span class="bp">self</span><span class="o">.</span><span class="n">statement</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">writer</span><span class="o">.</span><span class="n">indent</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">body</span><span class="o">.</span><span class="n">generate</span><span class="p">(</span><span class="n">writer</span><span class="p">)</span>
+</pre></div>
+<p>For a <code>_ControlBlock</code> node, we need to indent and write our child node list with
+the indentation.</p>
+<p>Now let's get back to the rendering part, we render a context by using the <code>generate</code>
+method of <code>Template</code> object, the <code>generate</code> function just call the compiled Python
+code:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">generate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="n">namespace</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">namespace</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">exec</span> <span class="bp">self</span><span class="o">.</span><span class="n">compiled</span> <span class="ow">in</span> <span class="n">namespace</span>
+    <span class="n">execute</span> <span class="o">=</span> <span class="n">namespace</span><span class="p">[</span><span class="s2">&quot;_execute&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">execute</span><span class="p">()</span>
+</pre></div>
+<p>The <code>exec</code> function executes the compiled code object in the given global namespace,
+then we grab our <code>_execute</code> function from the global namespace and call it.</p>
+<h3>Next</h3>
+<p>So that's all, compile the template to Python function and execute it to get result.
+The tornado template module has more features than we've discussed here, but we
+already know well about the basic idea, you can find out more if you are interested:</p>
+<ul>
+<li>Template inheritance</li>
+<li>Template inclusion</li>
+<li>More control logic like else, elif, try, etc</li>
+<li>Whitespace controls</li>
+<li>Escaping</li>
+<li>More template directives</li>
+</ul>
+
+    <div class="post-tags">
+      <span>tags:</span>
+      
+        <a href="">tornado</a>
+      
+        <a href="">template</a>
+      
+        <a href="">python</a>
+      
+    </div>
+  </div>
+
+
+      <footer>
+        <p>&copy; Copyright 2016 by Shipeng Feng.</p>
+        <p>Content licensed under the Creative Commons attribution-noncommercial-sharealike License.</p>
+      </footer>
+    </div>
+    <script type=text/javascript src="../../../../static/gen/app.js?h=56f85b4f" charset="utf-8"></script>
+  </body>
+</html>
