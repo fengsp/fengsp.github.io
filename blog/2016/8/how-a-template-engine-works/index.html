@@ -114,6 +114,7 @@ just one function, the simplified version is:</p>
     <span class="k">for</span> <span class="n">job</span> <span class="ow">in</span> <span class="n">jobs</span><span class="p">:</span>
         <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">      &lt;li&gt;&#39;</span><span class="p">)</span>
         <span class="n">_tmp</span> <span class="o">=</span> <span class="n">job</span><span class="o">.</span><span class="n">name</span>
+        <span class="c1"># simplified, several checks should be done on _tmp here</span>
         <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">_tmp</span><span class="p">))</span>
         <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;&lt;/li&gt;</span><span class="se">\n</span><span class="s1">    &#39;</span><span class="p">)</span>
     <span class="n">_buffer</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">  &lt;/ul&gt;</span><span class="se">\n</span><span class="s1">&lt;/html&gt;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
