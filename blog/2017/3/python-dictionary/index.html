@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Python dictionary, the implementation — Shipeng Feng's Writings</title>
+    <link rel="stylesheet" href="../../../../static/gen/styles.css?h=336c0b29">
+    <link rel="stylesheet" href="../../../../static/pygments.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="nav">
+        <a href="../../../../" >Welcome</a>
+        
+          <a href="../../../../blog/"  class="active">Blog</a>
+        
+          <a href="../../../../projects/" >Projects</a>
+        
+          <a href="../../../../about/" >About</a>
+        
+      </div>
+
+      
+  <div class="blog-post">
+    <h2>Python dictionary, the implementation</h2>
+    <p class="meta">
+      written by
+      
+        <a href="https://twitter.com/_fengsp">Shipeng Feng</a>
+      
+      on 2017-03-29
+    </p>
+    <br/>
+    <p>Dictionary is a really useful data type built into Python, basically it is a number
+of objects that are indexed by keys, the key here must be immutable.  Here is one
+simple dictionary usage:</p>
+<div class="highlight"><pre><span></span><span class="o">&gt;&gt;&gt;</span> <span class="n">d</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;fengsp&#39;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s1">&#39;amy&#39;</span><span class="p">:</span> <span class="mi">12</span><span class="p">}</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;fengsp&#39;</span><span class="p">]</span>
+<span class="mi">10</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">del</span> <span class="n">d</span><span class="p">[</span><span class="s1">&#39;fengsp&#39;</span><span class="p">]</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">d</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+<span class="p">[</span><span class="s1">&#39;amy&#39;</span><span class="p">]</span>
+</pre></div>
+<p>We retrieve the value a lot of times, the retrieval of one object by the key must be
+a very fast operation.  For the CPython itself, several language features are supported
+with the help of dictionaries, for example, class instances use a dictionary to store
+attributes, the performance of the dictionary is essential.</p>
+<h3>The PyDictObject</h3>
+<p>Inside the CPython, dictionary is a C structure, <code>PyDictObject</code>:</p>
+<div class="highlight"><pre><span></span><span class="k">struct</span> <span class="n">PyDictObject</span> <span class="p">{</span>
+    <span class="n">PyObject_HEAD</span>
+    <span class="n">Py_ssize_t</span> <span class="n">ma_fill</span><span class="p">;</span>  <span class="cm">/* # Active + # Dummy */</span>
+    <span class="n">Py_ssize_t</span> <span class="n">ma_used</span><span class="p">;</span>  <span class="cm">/* # Active */</span>
+    <span class="n">Py_ssize_t</span> <span class="n">ma_mask</span><span class="p">;</span>
+
+    <span class="n">PyDictEntry</span> <span class="o">*</span><span class="n">ma_table</span><span class="p">;</span>
+    <span class="n">PyDictEntry</span> <span class="o">*</span><span class="p">(</span><span class="o">*</span><span class="n">ma_lookup</span><span class="p">)(</span><span class="n">PyDictObject</span> <span class="o">*</span><span class="n">mp</span><span class="p">,</span> <span class="n">PyObject</span> <span class="o">*</span><span class="n">key</span><span class="p">,</span> <span class="kt">long</span> <span class="n">hash</span><span class="p">);</span>
+    <span class="n">PyDictEntry</span> <span class="n">ma_smalltable</span><span class="p">[</span><span class="n">PyDict_MINSIZE</span><span class="p">];</span>
+<span class="p">};</span>
+
+<span class="k">typedef</span> <span class="k">struct</span> <span class="p">{</span>
+    <span class="n">Py_ssize_t</span> <span class="n">me_hash</span><span class="p">;</span>
+    <span class="n">PyObject</span> <span class="o">*</span><span class="n">me_key</span><span class="p">;</span>
+    <span class="n">PyObject</span> <span class="o">*</span><span class="n">me_value</span><span class="p">;</span>
+<span class="p">}</span> <span class="n">PyDictEntry</span><span class="p">;</span>
+</pre></div>
+<p>The fields in the data structure are:</p>
+<p><strong>ma_fill</strong></p>
+<pre><code>Number of active and dummy entries.  If you delete a key, the entry will become
+a dummy entry and ma_fill remains the same, if you add a new key and the new
+key doesn't occupy a dummy entry, this is increased by 1.
+</code></pre>
+<p><strong>ma_used</strong></p>
+<pre><code>Number of active entries.  If you add a new key, it is increased by 1, if you
+delete a key, it is decreased by 1.
+</code></pre>
+<p><strong>ma_mask</strong></p>
+<pre><code>Bitmask of the hash table, the table contains ma_mask + 1 slots.  We store the
+mask instead of the size because when we are looking up the entry for a key,
+`slot = key_hash &amp; mask` is used to get the slot index.
+</code></pre>
+<p><strong>ma_table</strong></p>
+<pre><code>An array of `PyDictEntry` structures, the `PyDictEntry` contains the key object,
+the value object, and the key's hash, the key's hash is stored as a cache, for 
+example, when we are searching for a key, we can use the cached hash to perform
+a fast comparison.
+</code></pre>
+<p><strong>ma_lookup</strong></p>
+<pre><code>A pointer to the function used to look up keys.  Initially this is set to
+`lookdict_string`, `lookdict_string` assumes that the dictionary keys are all
+`PyStringObject`, this is an optimization so that looking up a key can be much
+faster for these `StringDictObject`.  If a key is not a `PyStringObject`, the
+`ma_lookup` is changed to a general lookup function which is slower.
+</code></pre>
+<p><strong>ma_smalltable</strong></p>
+<pre><code>An eight slot hash table.  Small dictionaries can be stored here and no `malloc()`
+would happen.
+</code></pre>
+<h3>Collision</h3>
+<p>Two keys could hash to the same slot, that's called a collision.  When a collision
+happens, Python use <em>open addressing</em> to solve it: if the slot doesn't contain the key,
+find another slot, for example, here is one simple approach, if slot i doesn't contain
+the key, try i+1, i+2, and so on.  For every hash, we now have a defined list of slots
+that could contain it, if we delete one of the keys from it, our list would be broken,
+that's why we need a dummy entry here.  The simple open addressing linear algorithm could
+end up with linear pile-up, that causes poor performance because we need to scan all these
+slots everytime we look up a key, in real life, CPython use the following algorithm:</p>
+<div class="highlight"><pre><span></span><span class="c1"># I am not clever enough to understand how the algorithm is came up with,</span>
+<span class="c1"># this eventually covers every integer between 0 and ma_mask.</span>
+<span class="k">def</span> <span class="nf">open_addressing_in_cpython</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="nb">hash</span><span class="p">):</span>
+    <span class="n">perturb</span> <span class="o">=</span> <span class="nb">hash</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="n">slot_index</span> <span class="o">=</span> <span class="nb">hash</span> <span class="o">&amp;</span> <span class="n">ma_mask</span>
+    <span class="k">while</span> <span class="n">table</span><span class="p">[</span><span class="n">slot_index</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">table</span><span class="p">[</span><span class="n">slot_index</span><span class="p">]</span><span class="o">.</span><span class="n">key</span> <span class="o">!=</span> <span class="n">key</span><span class="p">:</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span> <span class="o">*</span> <span class="n">i</span> <span class="o">+</span> <span class="n">perturb</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">slot_index</span> <span class="o">=</span> <span class="n">i</span> <span class="o">&amp;</span> <span class="n">ma_mask</span>
+        <span class="n">perturb</span> <span class="o">&gt;&gt;=</span> <span class="mi">5</span>
+    <span class="k">return</span> <span class="n">slot_index</span>
+</pre></div>
+<h3>Hash Table Size</h3>
+<p>If we keep adding keys to the dictionary, there won't be enough space to hold all
+the keys, now we need to resize the hash table.  The CPython would check for the table
+size everytime we add a key, if the table is two-thirds full (<code>ma_fill</code>), CPython would
+resize the hash table.  If a dictionary has 50000 keys or fewer, the new size is
+<code>ma_used * 4</code>, otherwise, it is <code>ma_used * 2</code>.  The table won't be resized if we delete
+a lot of keys from the dictionary, this means your hash table size is not going to be
+smaller, this isn't a big issue because mostly we use the dictionary for a while and then
+we discard the whole dictionary.  If you build a really large dictionary and then delete
+many keys from it, you should build a new one with the remaining keys.</p>
+<h3>Free List</h3>
+<p>Many dictionary instances are created and destroyed frequently, in order to reduce
+the number of creation and destruction, a <code>free_dicts</code> array is used to hold dictionary
+objects that are not in use anymore, it is simply one cache.  If we need a <code>PyDictObject</code>,
+it would be taken from the free list if available.</p>
+<h3>Key-Sharing And Ordered Dict</h3>
+<p>The dictionary uses more memory than is necessary when used as an object attributes container
+as the keys are the same and they are replicated for each instance.  Since Python 3.6,
+attribute dictionaries share keys with other attribute dictionaries of instances of
+the same class, for example if you have a class like this:</p>
+<div class="highlight"><pre><span></span><span class="k">class</span> <span class="nc">User</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">username</span><span class="p">,</span> <span class="n">email</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">username</span> <span class="o">=</span> <span class="n">username</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">email</span> <span class="o">=</span> <span class="n">email</span>
+</pre></div>
+<p>The attribute dictionary would be stored like this:</p>
+<div class="highlight"><pre><span></span><span class="c1"># this is shared between attribute dictionaries</span>
+<span class="c1"># this is also ordered</span>
+<span class="n">keys</span> <span class="o">=</span> <span class="p">[</span>
+    <span class="p">(</span><span class="mi">5317300778844242624</span><span class="p">,</span> <span class="s1">&#39;username&#39;</span><span class="p">),</span>
+    <span class="p">(</span><span class="mi">268341141884068675</span><span class="p">,</span> <span class="s1">&#39;email&#39;</span><span class="p">),</span>
+<span class="p">]</span>
+<span class="c1"># this hash table just stores the index to the key entries</span>
+<span class="c1"># it is compact</span>
+<span class="n">index_table</span> <span class="o">=</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">,</span> <span class="bp">None</span><span class="p">]</span>
+
+<span class="c1"># this is values</span>
+<span class="n">values</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;user01&#39;</span><span class="p">,</span> <span class="s1">&#39;user01@example.com&#39;</span><span class="p">]</span>
+</pre></div>
+<h3>My Opinion</h3>
+<p>The CPython Dictionary implementation is very straightforward and easy to understand.
+The code is beautiful, and it performs well, all variables are chosen by experiments,
+for example, the size of <code>free_dicts</code> and the size of <code>ma_smalltable</code>.  I love it.</p>
+
+    <div class="post-tags">
+      <span>tags:</span>
+      
+        <a href="">python</a>
+      
+        <a href="">dictionary</a>
+      
+    </div>
+  </div>
+
+
+      <footer>
+        <p>&copy; Copyright 2017 by Shipeng Feng.</p>
+        <p>Content licensed under the Creative Commons attribution-noncommercial-sharealike License.</p>
+      </footer>
+    </div>
+    <script type=text/javascript src="../../../../static/gen/app.js?h=56f85b4f" charset="utf-8"></script>
+  </body>
+</html>
