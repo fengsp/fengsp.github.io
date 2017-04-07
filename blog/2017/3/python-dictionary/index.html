@@ -106,15 +106,22 @@ that could contain it, if we delete one of the keys from it, our list would be b
 that's why we need a dummy entry here.  The simple open addressing linear algorithm could
 end up with linear pile-up, that causes poor performance because we need to scan all these
 slots everytime we look up a key, in real life, CPython use the following algorithm:</p>
-<div class="highlight"><pre><span></span><span class="c1"># I am not clever enough to understand how the algorithm is came up with,</span>
+<div class="highlight"><pre><span></span><span class="n">DUMMY</span> <span class="o">=</span> <span class="s1">&#39;dummy&#39;</span>
+
+<span class="c1"># I am not clever enough to understand how the algorithm is came up with,</span>
 <span class="c1"># this eventually covers every integer between 0 and ma_mask.</span>
 <span class="k">def</span> <span class="nf">open_addressing_in_cpython</span><span class="p">(</span><span class="n">table</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="nb">hash</span><span class="p">):</span>
+    <span class="n">free_slot</span> <span class="o">=</span> <span class="bp">None</span>
     <span class="n">perturb</span> <span class="o">=</span> <span class="nb">hash</span>
     <span class="n">i</span> <span class="o">=</span> <span class="n">slot_index</span> <span class="o">=</span> <span class="nb">hash</span> <span class="o">&amp;</span> <span class="n">ma_mask</span>
     <span class="k">while</span> <span class="n">table</span><span class="p">[</span><span class="n">slot_index</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">table</span><span class="p">[</span><span class="n">slot_index</span><span class="p">]</span><span class="o">.</span><span class="n">key</span> <span class="o">!=</span> <span class="n">key</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">table</span><span class="p">[</span><span class="n">slot_index</span><span class="p">]</span><span class="o">.</span><span class="n">key</span> <span class="ow">is</span> <span class="n">DUMMY</span> <span class="ow">and</span> <span class="n">free_slot</span> <span class="ow">is</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">free_slot</span> <span class="o">=</span> <span class="n">slot_index</span>
         <span class="n">i</span> <span class="o">=</span> <span class="p">(</span><span class="mi">5</span> <span class="o">*</span> <span class="n">i</span> <span class="o">+</span> <span class="n">perturb</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
         <span class="n">slot_index</span> <span class="o">=</span> <span class="n">i</span> <span class="o">&amp;</span> <span class="n">ma_mask</span>
         <span class="n">perturb</span> <span class="o">&gt;&gt;=</span> <span class="mi">5</span>
+    <span class="k">if</span> <span class="n">table</span><span class="p">[</span><span class="n">slot_index</span><span class="p">]</span> <span class="ow">is</span> <span class="bp">None</span> <span class="ow">and</span> <span class="n">free_slot</span> <span class="ow">is</span> <span class="ow">not</span> <span class="bp">None</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">free_slot</span>
     <span class="k">return</span> <span class="n">slot_index</span>
 </pre></div>
 <h3>Hash Table Size</h3>
